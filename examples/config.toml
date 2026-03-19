@@ -1,0 +1,34 @@
+# Example bbpipelinediag configuration
+# This file is typically located in:
+# macOS: ~/Library/Application Support/bbpipelinediag/config.toml
+# Linux: ~/.config/bbpipelinediag/config.toml
+
+workspace = "your-workspace"
+repo = "your-repo"
+bitbucket_username = "your.email@example.com"
+bitbucket_app_password = "your-app-password"
+
+# HTTP Range requesting (Optional)
+# To get the last 10 KiB of logs:
+[http_range]
+start = -10240
+
+# Filters are applied in order
+[[filters]]
+type = "grep"
+pattern = "ERROR"
+before = 5
+after = 50
+
+# Diagnosis can be 'llm' or 'exec'
+[diagnosis]
+type = "llm"
+base_url = "https://api.openai.com/v1"
+model = "gpt-4o"
+# api_key = "sk-..." # Or use LLM_API_KEY environment variable
+# system_prompt = "You are a CI/CD pipeline expert."
+# user_prompt = "Analyze the following build log snippet and identify the root cause of the failure. Suggest a fix if possible. Be concise."
+
+# [diagnosis]
+# type = "exec"
+# command = "grep -i 'exception'"
