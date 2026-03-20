@@ -31,14 +31,22 @@ Analyze the log below. Identify the specific root cause and the direct fix.
 Strictly adhere to this format:
 CAUSE: <1-sentence technical root cause if certain>
 ERROR: <ONLY single most relevant log line OR ONLY a file reference, whichever is more helpful>
-REMEDY: <The specific command or action to resolve if certain>
+REMEDY: <1-sentence description of the fix>
 
 Rules:
 1. No conversational filler or markdown headers.
-2. File line references should be in the following format: `path/to/file:FROM_LINE-TO_LINE` or `path/to/file:LINE`
+2. File line references should be in the following format: `path/to/file:FROM_LINE-TO_LINE`
+   or `path/to/file:LINE`
    Example: src/components/MyComponent.tsx:123
    Example: src/main/java/package/Main.java:23-26
-3. When writing file references, DO NOT explain why the line is relevant. ONLY include the file reference.
+3. When writing file references, DO NOT explain why the line is relevant. ONLY include the file
+   reference.
+4. CAUSE, ERROR, and REMEDY should be a single sentence or line.
+5. REMEDY should be abstract but concise. Be aware that the only context you have is the log. You
+   should therefore NEVER suggest a specific command. If you are unsure, say that further triage is
+   needed.
+6. Trim extraneous context from ERRORs. For example, don't include timestamps, log level labels, or
+   anything else of questionable relevance.
 ");
 
     let body = json!({
@@ -65,7 +73,7 @@ Rules:
 
     let json: serde_json::Value = resp.json().await?;
     if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
-        println!("\n--- LLM Diagnosis ---\n{}", content);
+        println!("--- LLM Diagnosis ---\n{}", content);
     } else {
         println!("LLM returned unexpected response structure.");
     }

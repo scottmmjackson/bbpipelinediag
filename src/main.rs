@@ -107,7 +107,10 @@ async fn main() -> Result<()> {
 
             let client = BitbucketClient::new(username, app_password);
 
-            println!("Diagnosing {}/{}...", workspace, repo);
+            match pipeline_id.clone() {
+                Some(id) => println!("Diagnosing {}/{} #{}...", workspace, repo, id),
+                None => println!("Diagnosing {}/{}...", workspace, repo),
+            }
 
             let pipeline_uuid = match pipeline_id {
                 Some(id) => id,
@@ -139,9 +142,8 @@ async fn main() -> Result<()> {
             };
 
             // Get steps
-            let steps = client.get_steps(&workspace, &repo, &pipeline_uuid).await?;
+            let steps = client.get_all_steps(&workspace, &repo, &pipeline_uuid).await?;
             let failed_steps: Vec<_> = steps
-                .values
                 .into_iter()
                 .filter(|s| {
                     s.state
@@ -172,7 +174,7 @@ async fn main() -> Result<()> {
             }).filter(|s| !s.is_empty());
 
             for step in failed_steps {
-                println!("\n--- Step: {} ({}) ---", step.name, step.uuid);
+                println!("--- Step: {} ({}) ---", step.name, step.uuid);
                 let log = client
                     .get_step_log(&workspace, &repo, &pipeline_uuid, &step.uuid, range_header.clone())
                     .await?;
@@ -182,13 +184,12 @@ async fn main() -> Result<()> {
                 if let Some(diag_cfg) = &cfg.diagnosis {
                     match diag_cfg {
                         DiagnosisConfig::Llm { config } => {
-                            println!("\n--- Sending to LLM ---");
                             if let Err(e) = llm::diagnose(&filtered_log, config).await {
                                 eprintln!("LLM Diagnosis failed: {:#}", e);
                             }
                         }
                         DiagnosisConfig::Exec { command } => {
-                            println!("\n--- Piping to: {} ---", command);
+                            println!("--- Piping to: {} ---", command);
                             let mut child = ProcessCommand::new("sh")
                                 .arg("-c")
                                 .arg(command)

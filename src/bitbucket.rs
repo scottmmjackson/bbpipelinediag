@@ -2,11 +2,13 @@ use anyhow::{Context, Result};
 use reqwest::Client;
 use serde::Deserialize;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct Page<T> {
     pub values: Vec<T>,
-    #[allow(dead_code)]
-    pub next: Option<String>,
+    pub size: Option<usize>,
+    pub pagelen: Option<usize>,
+    pub page: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,12 +91,56 @@ impl BitbucketClient {
         workspace: &str,
         repo: &str,
         pipeline_uuid: &str,
+        page: Option<usize>,
     ) -> Result<Page<Step>> {
-        let path = format!(
-            "/repositories/{}/{}/pipelines/{}/steps/",
-            workspace, repo, pipeline_uuid
-        );
+        let path: String;
+        if let Some(p) = page {
+            path = format!(
+                "/repositories/{}/{}/pipelines/{}/steps/?page={}&pagelen=100",
+                workspace, repo, pipeline_uuid, p
+            );
+        } else {
+            path = format!(
+                "/repositories/{}/{}/pipelines/{}/steps?pagelen=100",
+                workspace, repo, pipeline_uuid
+            );
+        }
         self.get(&path).await
+    }
+
+    pub async fn get_all_steps(
+        &self,
+        workspace: &str,
+        repo: &str,
+        pipeline_uuid: &str,
+    ) -> Result<Vec<Step>> {
+        let mut all_steps = Vec::new();
+        let mut current_page = 1;
+
+        loop {
+            let page = self
+                .get_steps(workspace, repo, pipeline_uuid, Some(current_page))
+                .await?;
+            
+            if page.values.is_empty() {
+                break;
+            }
+
+            let num_on_page = page.values.len();
+            all_steps.extend(page.values);
+
+            if let Some(total_size) = page.size {
+                if all_steps.len() >= total_size {
+                    break;
+                }
+            } else if num_on_page == 0 {
+                break;
+            }
+
+            current_page += 1;
+        }
+
+        Ok(all_steps)
     }
 
     pub async fn get_step_log(
